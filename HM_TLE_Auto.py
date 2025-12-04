@@ -8,6 +8,7 @@ from matplotlib import animation
 import torchio as tio
 import nibabel as nib
 from resnet import resnet18   # Assicurati che resnet.py sia nel PYTHONPATH
+import json
 
 os.chdir(r"C:\Users\ludov\Scripts")
 
@@ -174,11 +175,18 @@ with open(best_id_file, "r") as f:
     best_trial_id = f.read().strip()
 print(f"Best trial ID: {best_trial_id}")
 
+best_params_file = os.path.join(results_dir, "optuna_best_params.json")
+with open(best_params_file, "r") as f:
+    best_trial_params = json.load(f)["params"]
+
+dropout = best_trial_params["dropout"]  # usa il dropout ottimale
+
+
 for f in FOLDS:
     wpath = os.path.join(results_dir,"best_model_fold_{f}_trial_{best_trial_id}.pth")
     state = torch.load(wpath, map_location=DEVICE)
     model = resnet18(sample_input_D=163, sample_input_H=193, sample_input_W=166,
-                     num_seg_classes=1).to(DEVICE)
+                     num_seg_classes=1, dropout=dropout).to(DEVICE)
     model.load_state_dict(state["state_dict"], strict=False)
     model.eval()
     MODELS.append(GradCAM3D(model, model.layer4))
